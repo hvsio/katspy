@@ -1,0 +1,10 @@
+// Main SCSS file
+@use './variables' as *;
+@use './base';
+
+// Example styles
+body {
+  font-family: $font-family-primary;
+  color: $color-text;
+  background-color: $color-background;
+}
