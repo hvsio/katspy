@@ -1,3 +1,50 @@
+<template>
+  <div class="webrtc-viewer">
+    <video ref="videoRef" class="video-element" autoplay muted playsinline />
+
+    <div class="overlay">
+      <div class="connection-status" :class="connectionState">
+        <div class="status-indicator"></div>
+        <span class="status-text">
+          {{ connectionState === 'connecting' ? 'Connecting...' :
+            connectionState === 'connected' ? 'Connected' :
+              connectionState === 'failed' ? 'Connection Failed' :
+                'Disconnected' }}
+        </span>
+      </div>
+
+      <div v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <div class="controls">
+        <button @click="connect" :disabled="connectionState === 'connecting'" class="btn-primary">
+          {{ connectionState === 'connected' ? 'Reconnect' : 'Connect' }}
+        </button>
+
+        <button @click="disconnect" :disabled="connectionState === 'disconnected'" class="btn-secondary">
+          Disconnect
+        </button>
+      </div>
+    </div>
+
+    <div v-if="connectionState !== 'connected'" class="no-video">
+      <div class="placeholder">
+        <h2>WebRTC Video Stream</h2>
+        <p v-if="connectionState === 'disconnected'">
+          Click Connect to start receiving video stream
+        </p>
+        <p v-else-if="connectionState === 'connecting'">
+          Establishing connection...
+        </p>
+        <p v-else-if="connectionState === 'failed'">
+          {{ errorMessage || 'Connection failed' }}
+        </p>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 
@@ -172,53 +219,6 @@ onUnmounted(() => {
   disconnect()
 })
 </script>
-
-<template>
-  <div class="webrtc-viewer">
-    <video ref="videoRef" class="video-element" autoplay muted playsinline />
-
-    <div class="overlay">
-      <div class="connection-status" :class="connectionState">
-        <div class="status-indicator"></div>
-        <span class="status-text">
-          {{ connectionState === 'connecting' ? 'Connecting...' :
-            connectionState === 'connected' ? 'Connected' :
-              connectionState === 'failed' ? 'Connection Failed' :
-                'Disconnected' }}
-        </span>
-      </div>
-
-      <div v-if="errorMessage" class="error-message">
-        {{ errorMessage }}
-      </div>
-
-      <div class="controls">
-        <button @click="connect" :disabled="connectionState === 'connecting'" class="btn-primary">
-          {{ connectionState === 'connected' ? 'Reconnect' : 'Connect' }}
-        </button>
-
-        <button @click="disconnect" :disabled="connectionState === 'disconnected'" class="btn-secondary">
-          Disconnect
-        </button>
-      </div>
-    </div>
-
-    <div v-if="connectionState !== 'connected'" class="no-video">
-      <div class="placeholder">
-        <h2>WebRTC Video Stream</h2>
-        <p v-if="connectionState === 'disconnected'">
-          Click Connect to start receiving video stream
-        </p>
-        <p v-else-if="connectionState === 'connecting'">
-          Establishing connection...
-        </p>
-        <p v-else-if="connectionState === 'failed'">
-          {{ errorMessage || 'Connection failed' }}
-        </p>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style lang="scss" scoped>
 @use '../assets/styles/variables' as *;

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import WebRTCViewer from './components/WebRTCViewer.vue'
+import LoginPage from './components/LoginPage.vue';
 </script>
 
 <template>
-  <WebRTCViewer signaling-url="ws://localhost:8080/ws/sender" />
+  <LoginPage/>
 </template>
 
 
