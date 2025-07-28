@@ -1,0 +1,8 @@
+// Main SCSS entry point
+@use 'base/variables';
+
+// Import component styles
+@use 'components/login-page';
+@use 'components/webrtc-viewer';
+
+// Global styles can be added here

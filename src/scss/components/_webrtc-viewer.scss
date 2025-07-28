@@ -1,0 +1,152 @@
+@use '../base/variables' as *;
+@use 'sass:color';
+
+.webrtc-viewer {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.overlay {
+  position: absolute;
+  top: $spacing-md;
+  left: $spacing-md;
+  right: $spacing-md;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius;
+  font-size: $font-size-small;
+
+  .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+
+    .disconnected & {
+      background: #666;
+    }
+
+    .connecting & {
+      background: #f39c12;
+      animation: pulse 1.5s infinite;
+    }
+
+    .connected & {
+      background: #27ae60;
+    }
+
+    .failed & {
+      background: #e74c3c;
+    }
+  }
+}
+
+.error-message {
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius;
+  font-size: $font-size-small;
+  max-width: 300px;
+}
+
+.controls {
+  display: flex;
+  gap: $spacing-sm;
+
+  button {
+    padding: $spacing-sm $spacing-md;
+    border-radius: $border-radius;
+    font-size: $font-size-small;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-primary {
+    background: $color-secondary;
+    color: white;
+    border: none;
+
+    &:hover:not(:disabled) {
+      background: color.adjust($color-secondary, $lightness: -10%);
+    }
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.no-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  z-index: 5;
+
+  .placeholder {
+    background: rgba(0, 0, 0, 0.8);
+    padding: $spacing-xl;
+    border-radius: $border-radius-large;
+
+    h2 {
+      margin: 0 0 $spacing-md 0;
+      font-size: $font-size-large;
+    }
+
+    p {
+      margin: 0;
+      opacity: 0.8;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
