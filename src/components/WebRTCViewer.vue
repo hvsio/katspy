@@ -1,45 +1,22 @@
 <template>
   <div class="webrtc-viewer">
     <video ref="videoRef" class="video-element" autoplay muted playsinline />
-
     <div class="overlay">
-      <div class="connection-status" :class="connectionState">
+      <div class="grey-button" :class="connectionState">
         <div class="status-indicator"></div>
         <span class="status-text">
-          {{ connectionState === 'connecting' ? 'Connecting...' :
-            connectionState === 'connected' ? 'Connected' :
-              connectionState === 'failed' ? 'Connection Failed' :
-                'Disconnected' }}
+          {{ connectionState.charAt(0).toUpperCase() + connectionState.slice(1) }}
         </span>
       </div>
-
+      <button class="logout-button grey-button" @click="logout">
+        <span>
+          Logout
+        </span>
+      </button>
       <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
-
-      <div class="controls">
-        <button @click="connect" :disabled="connectionState === 'connecting'" class="btn-primary">
-          {{ connectionState === 'connected' ? 'Reconnect' : 'Connect' }}
-        </button>
-
-        <button @click="disconnect" :disabled="connectionState === 'disconnected'" class="btn-secondary">
-          Disconnect
-        </button>
-      </div>
-    </div>
-
-    <div v-if="connectionState !== 'connected'" class="no-video">
-      <div class="placeholder">
-        <h2>WebRTC Video Stream</h2>
-        <p v-if="connectionState === 'disconnected'">
-          Click Connect to start receiving video stream
-        </p>
-        <p v-else-if="connectionState === 'connecting'">
-          Establishing connection...
-        </p>
-        <p v-else-if="connectionState === 'failed'">
-          {{ errorMessage || 'Connection failed' }}
-        </p>
+      <div v-if="connectionState !== 'connected'" class="no-video">
       </div>
     </div>
   </div>
@@ -47,6 +24,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 interface Props {
   signalingUrl?: string
@@ -57,11 +37,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const videoRef = ref<HTMLVideoElement>()
-const connectionState = ref<'disconnected' | 'connecting' | 'connected' | 'failed'>('disconnected')
+const connectionState = ref<'disconnected' | 'connecting' | 'connected' | 'failed' | 'closed' | 'new'>('disconnected')
 const errorMessage = ref<string>('')
-
-let peerConnection: RTCPeerConnection | null = null
-let websocket: WebSocket | null = null
 
 const setupConnection = (): RTCPeerConnection => {
   const ws = new WebSocket(props.signalingUrl);
@@ -102,9 +79,8 @@ const setupConnection = (): RTCPeerConnection => {
   // Monitor connection state changes
   pc.onconnectionstatechange = () => {
     console.log('🔗 Connection state:', pc.connectionState);
-
-    if (pc.connectionState === 'connected') {
-    } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+    connectionState.value = pc.connectionState
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
       disconnect();
     }
   };
@@ -113,38 +89,32 @@ const setupConnection = (): RTCPeerConnection => {
     console.log('🧊 ICE connection state:', pc.iceConnectionState);
   };
 
-  // Create WebSocket connection
-
   ws.onopen = () => {
     console.log('🔌 WebSocket connected to backend');
 
-    // Small delay to ensure backend is ready
-    setTimeout(() => {
-      // Create offer to start WebRTC negotiation
-      pc.createOffer()
-        .then(offer => {
-          console.log('📤 Created offer');
-          console.log('📄 Offer SDP length:', offer?.sdp?.length);
+    pc.createOffer()
+      .then(offer => {
+        console.log('📤 Created offer');
+        console.log('📄 Offer SDP length:', offer?.sdp?.length);
 
-          // Validate offer has ICE parameters
-          if (!offer?.sdp?.includes('ice-ufrag') || !offer?.sdp?.includes('ice-pwd')) {
-            throw new Error('Generated offer missing ICE credentials');
-          }
+        // Validate offer has ICE parameters
+        if (!offer?.sdp?.includes('ice-ufrag') || !offer?.sdp?.includes('ice-pwd')) {
+          throw new Error('Generated offer missing ICE credentials');
+        }
 
-          return pc.setLocalDescription(offer);
-        })
-        .then(() => {
-          console.log('📤 Local description set, sending offer to backend');
-          ws.send(JSON.stringify({
-            type: 'offer',
-            sdp: pc?.localDescription?.sdp
-          }));
-        })
-        .catch(err => {
-          console.error('❌ Error creating/sending offer:', err);
-        });
-    }, 100);
-  };
+        return pc.setLocalDescription(offer);
+      })
+      .then(() => {
+        console.log('📤 Local description set, sending offer to backend');
+        ws.send(JSON.stringify({
+          type: 'offer',
+          sdp: pc?.localDescription?.sdp
+        }));
+      })
+      .catch(err => {
+        console.error('❌ Error creating/sending offer:', err);
+      });
+  }
 
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
@@ -193,16 +163,6 @@ const connect = () => {
 }
 
 const disconnect = () => {
-  if (peerConnection) {
-    peerConnection.close()
-    peerConnection = null
-  }
-
-  if (websocket) {
-    websocket.close()
-    websocket = null
-  }
-
   if (videoRef.value) {
     videoRef.value.srcObject = null
   }
@@ -211,7 +171,15 @@ const disconnect = () => {
   errorMessage.value = ''
 }
 
+const logout = () => {
+  localStorage.removeItem('authToken')
+  localStorage.removeItem('username')
+  disconnect()
+  router.push('/login')
+}
+
 onMounted(() => {
+  
   connect()
 })
 
