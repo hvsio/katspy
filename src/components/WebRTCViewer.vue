@@ -40,6 +40,23 @@ const videoRef = ref<HTMLVideoElement>()
 const connectionState = ref<'disconnected' | 'connecting' | 'connected' | 'failed' | 'closed' | 'new'>('disconnected')
 const errorMessage = ref<string>('')
 
+const requestVideoStart = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/relay/start', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    if (!response.ok || !(response.status >= 200 && response.status < 300)) {
+      const body = await response.json()
+      throw new Error(body.error)
+    }
+  } catch (error) {
+    console.error('❌ Error requesting video start:', error)
+  }
+}
+
 const setupConnection = (): RTCPeerConnection => {
   const ws = new WebSocket(props.signalingUrl);
   const pc = new RTCPeerConnection({
@@ -179,7 +196,9 @@ const logout = () => {
 }
 
 onMounted(() => {
-  
+  if (!videoRef.value?.srcObject) {
+    requestVideoStart()
+  }
   connect()
 })
 

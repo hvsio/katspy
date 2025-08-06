@@ -22,9 +22,9 @@ export const authenticate = async (credentials: LoginCredentials): Promise<AuthR
       },
       body: JSON.stringify(credentials)
     })
-
     if (!response.ok || !(response.status >= 200 && response.status < 300)) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const body = await response.json()
+      throw new Error(body.error)
     }
 
     const data: AuthResponse = await response.json()
@@ -32,10 +32,9 @@ export const authenticate = async (credentials: LoginCredentials): Promise<AuthR
     
     return data
   } catch (error) {
-    console.error('Authentication request failed:', error)
     return { 
       success: false, 
-      message: 'Unable to connect to authentication server' 
+      message: error instanceof Error ? error.message : 'An unknown error occurred'
     }
   }
 }
