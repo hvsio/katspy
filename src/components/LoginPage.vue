@@ -76,7 +76,7 @@ const handleLogin = async (): Promise<void> => {
       localStorage.setItem('username', username.value.trim())
       router.push('/viewer')
     } else {
-      error.value = authResult.message || 'Invalid credentials'
+      error.value = "❌ Could not login: " + authResult.message || 'Invalid credentials'
     }
   } catch (err) {
     error.value = 'Authentication failed'

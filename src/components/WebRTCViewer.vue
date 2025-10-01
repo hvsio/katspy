@@ -1,24 +1,28 @@
 <template>
   <div class="webrtc-viewer">
     <video ref="videoRef" class="video-element" autoplay muted playsinline />
-    <div class="overlay">
-      <div class="grey-button" :class="connectionState">
-        <div class="status-indicator"></div>
+    <div class="overlay glassy">
+      <div class="status-button" :class="connectionState">
+        <div class="status-indicator transparent-button"></div>
         <span class="status-text">
           {{ connectionState.charAt(0).toUpperCase() + connectionState.slice(1) }}
         </span>
       </div>
-      <button class="logout-button grey-button" @click="logout">
+      <button class="reconnect-button" @click="connect">
+        <span>
+          Reconnect
+        </span>
+      </button>
+      <div v-if="popupMessage" class="popup-message">
+        {{ popupMessage }}
+      </div>
+      <button class="logout-button" @click="logout">
         <span>
           Logout
         </span>
       </button>
-      <div v-if="errorMessage" class="error-message">
-        {{ errorMessage }}
-      </div>
-      <div v-if="connectionState !== 'connected'" class="no-video">
-      </div>
     </div>
+    <div v-if="connectionState !== 'connected'" class="no-video"> No video found</div>
   </div>
 </template>
 
@@ -38,7 +42,14 @@ const props = withDefaults(defineProps<Props>(), {
 
 const videoRef = ref<HTMLVideoElement>()
 const connectionState = ref<'disconnected' | 'connecting' | 'connected' | 'failed' | 'closed' | 'new'>('disconnected')
-const errorMessage = ref<string>('')
+const popupMessage = ref<string>('')
+const ws = new WebSocket(props.signalingUrl);
+const pc = new RTCPeerConnection({
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+});
 
 const requestVideoStart = async () => {
   try {
@@ -53,19 +64,11 @@ const requestVideoStart = async () => {
       throw new Error(body.error)
     }
   } catch (error) {
-    console.error('❌ Error requesting video start:', error)
+    popupMessage.value = '❌ Error requesting video start: ' + error
   }
 }
 
 const setupConnection = (): RTCPeerConnection => {
-  const ws = new WebSocket(props.signalingUrl);
-  const pc = new RTCPeerConnection({
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
-    ]
-  });
-
   // IMPORTANT: Add transceivers for receiving media BEFORE creating offer
   // This ensures the SDP will contain proper ICE parameters
   pc.addTransceiver('video', { direction: 'recvonly' });
@@ -80,6 +83,7 @@ const setupConnection = (): RTCPeerConnection => {
     } else if (event.track.kind === 'audio') {
       console.log('🔊 Audio track received');
     }
+    popupMessage.value = '';
   };
 
   // Handle ICE candidates
@@ -129,7 +133,7 @@ const setupConnection = (): RTCPeerConnection => {
         }));
       })
       .catch(err => {
-        console.error('❌ Error creating/sending offer:', err);
+        popupMessage.value = '❌ Error creating/sending offer: ' + err;
       });
   }
 
@@ -143,7 +147,7 @@ const setupConnection = (): RTCPeerConnection => {
 
       // Validate SDP has required ICE parameters
       if (!message.sdp.includes('ice-ufrag') || !message.sdp.includes('ice-pwd')) {
-        console.error('❌ Invalid SDP: Missing ICE credentials');
+        popupMessage.value = '❌ Invalid SDP: Missing ICE credentials';
         return;
       }
 
@@ -153,29 +157,37 @@ const setupConnection = (): RTCPeerConnection => {
       })).then(() => {
         console.log('✅ Set remote description successfully');
       }).catch(err => {
-        console.error('❌ Error setting remote description:', err);
-        console.error('📄 Problematic SDP:', message.sdp);
+        popupMessage.value = '❌ Error setting remote description: ' + err;
       });
     } else if (message.type === 'ice-candidate') {
       console.log('🧊 Received ICE candidate from backend');
       pc.addIceCandidate(new RTCIceCandidate(message.candidate))
-        .catch(err => console.error('❌ Error adding ICE candidate:', err));
+        .catch(err => popupMessage.value = '❌ Error adding ICE candidate: ' + err);
     }
   };
 
   ws.onclose = () => {
-    console.log('🔌 WebSocket disconnected');
+    disconnect()
+    popupMessage.value = '🔌 WebSocket disconnected';
   };
 
   ws.onerror = (error) => {
-    console.error('❌ WebSocket error:', error);
+    disconnect()
+    popupMessage.value = '❌ WebSocket error: ' + error;
   };
 
   return pc
 }
 
 const connect = () => {
-  disconnect()
+  if (connectionState.value === 'connected') {
+    return
+  }
+
+  if (!videoRef.value?.srcObject) {
+    requestVideoStart()
+  }
+
   setupConnection()
 }
 
@@ -185,26 +197,20 @@ const disconnect = () => {
   }
 
   connectionState.value = 'disconnected'
-  errorMessage.value = ''
 }
 
-const logout = () => {
+const logout = async () => {
   localStorage.removeItem('authToken')
   localStorage.removeItem('username')
+
+  pc.close()
+  ws.close()
   disconnect()
   router.push('/login')
 }
 
-onMounted(() => {
-  if (!videoRef.value?.srcObject) {
-    requestVideoStart()
-  }
-  connect()
-})
-
-onUnmounted(() => {
-  disconnect()
-})
+onMounted(() => { connect() })
+onUnmounted(() => { disconnect() })
 </script>
 
 <style lang="scss" scoped>
