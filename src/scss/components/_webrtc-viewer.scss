@@ -1,5 +1,6 @@
 @use '../base/variables' as *;
 @use 'sass:color';
+@use 'sass:math';
 
 .webrtc-viewer {
   width: 100vw;
@@ -25,7 +26,7 @@
   backdrop-filter: blur(5px);
   
   > * {
-    background: rgba(150 + random(50), random(100), random(255), 0.5);
+    background: rgba(150 + math.random(50), math.random(100), math.random(255), 0.5);
     border: 1px solid rgba(99, 99, 99, 0.046);
     color: white;
     font-size: $font-size-small;
@@ -33,7 +34,7 @@
     line-height: 1;
 
     &:hover {
-      background: rgba(150 + random(50), random(100), random(255), 0.7);
+      background: rgba(150 + math.random(50), math.random(100), math.random(255), 0.7);
     }
   }
 }
